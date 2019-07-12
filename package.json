@@ -1,0 +1,25 @@
+{
+  "name": "oriql",
+  "version": "0.1.0",
+  "description": "A simple and effective schema management tool for GraphQL",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/michaelcacciatore/oriql.git"
+  },
+  "keywords": [
+    "react",
+    "graphql",
+    "oriql",
+    "apollo"
+  ],
+  "author": "Michael Cacciatore <mcacciatore116@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/michaelcacciatore/oriql/issues"
+  },
+  "homepage": "https://github.com/michaelcacciatore/oriql#readme"
+}
