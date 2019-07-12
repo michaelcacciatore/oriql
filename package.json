@@ -1,6 +1,6 @@
 {
   "name": "oriql",
-  "version": "0.1.0-alpha1",
+  "version": "0.1.0-alpha2",
   "description": "A simple and effective schema management tool for GraphQL",
   "main": "index.js",
   "scripts": {
