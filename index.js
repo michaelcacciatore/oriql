@@ -1,4 +1,4 @@
-const compile = require('./compiler');
+const compile = require('./compile');
 
 module.exports = {
   compile,
