@@ -14,14 +14,16 @@ const getAll = (obj, keyToGet) => {
           return value[field].map(prop => get(prop, keyIndex + 1));
         }
 
-        return get(value[field], keyIndex + 1)
+        return get(value[field], keyIndex + 1);
       }
 
       if (keyIndex === keys.length - 1) {
         return value[field];
       }
+
+      return next;
     }, {});
-  }
+  };
 
   if (Array.isArray(obj)) {
     return obj.map(field => get(field, 0));
@@ -29,6 +31,5 @@ const getAll = (obj, keyToGet) => {
 
   return get(obj, 0);
 };
-
 
 module.exports = getAll;

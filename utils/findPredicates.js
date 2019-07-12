@@ -17,9 +17,13 @@ const findPredicates = (obj, predicate, existingPath = '') => {
       }
       return findPredicates(value, predicate, newPath);
     }
+    return undefined;
   };
 
-  return Object.keys(obj).map(key => find(obj, key)).filter(field => !!field).flat(levels);
+  return Object.keys(obj)
+    .map(key => find(obj, key))
+    .filter(field => !!field)
+    .flat(levels);
 };
 
 module.exports = findPredicates;

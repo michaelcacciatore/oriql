@@ -1,33 +1,17 @@
 const { promisify } = require('util');
 const { sep } = require('path');
 const glob = require('glob');
-const {
-  GraphQLNonNull,
-  GraphQLList,
-  GraphQLSchema,
-  isOutputType,
-} = require(`${process.cwd()}${sep}node_modules${sep}graphql`);
+const { GRAPHQL_OPTIONS_KEY, GRAPHQL_PATH, resolve } = require('../constants');
+
+const { GraphQLNonNull, GraphQLList, GraphQLSchema, isOutputType } = require(GRAPHQL_PATH);
 
 const createArgumentConfig = require('./arguments');
-const {
-  resolve,
-  GRAPHQL_OPTIONS_KEY,
-} = require('../constants');
-const {
-  isGraphQLOutputType,
-  isNestedObject,
-} = require('./helpers');
-const {
-  createOutputType,
-} = require('./types');
-const {
-  reservedKeys,
-  reservedWords,
-} = require('./reserved');
+const { isGraphQLOutputType, isNestedObject } = require('./helpers');
+const { createOutputType } = require('./types');
 
 const findFiles = promisify(glob);
 
-const compileSchema =  async (filePattern = '!(node_modules)/**/schema.js') => {
+const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
   try {
     const schemaFiles = await findFiles(filePattern);
     const nestedTypes = new Map();
@@ -39,10 +23,10 @@ const compileSchema =  async (filePattern = '!(node_modules)/**/schema.js') => {
         deprecationReason,
         name,
         schema: schemaContent = {},
-        mutation = {}
-      } = require(`${process.cwd()}${sep}${file}`);
-      
-      const compile = (schema, previousName) => (
+        mutation: schemaMutation = {},
+      } = require(`${process.cwd()}${sep}${file}`); // eslint-disable-line global-require
+
+      const compile = (schema, previousName) =>
         Object.entries(schema).reduce((final, [key, value]) => {
           const isArray = Array.isArray(value);
           const schemaValue = isArray ? value[0] : value;
@@ -55,10 +39,11 @@ const compileSchema =  async (filePattern = '!(node_modules)/**/schema.js') => {
               ...final,
               [key]: {
                 type: isArray ? GraphQLList(schemaValue) : schemaValue,
-                resolve: () => key
+                resolve: () => key,
               },
             };
-          } else if (isGraphQLOutputType(schemaValue)) {
+          }
+          if (isGraphQLOutputType(schemaValue)) {
             /**
              * Example:
              * bar: {
@@ -69,17 +54,13 @@ const compileSchema =  async (filePattern = '!(node_modules)/**/schema.js') => {
             const {
               type,
               required = false,
-              source: {
-                resolver,
-                args: sourceArgs,
-                schema: sourceSchema
-              } = {},
-              schema: requestedSchema,
-              [GRAPHQL_OPTIONS_KEY]: graphql = {} // optional ptions to be passed to graphql. ie name, description, deprecationReason
+              source: { resolver, args: sourceArgs /* schema: sourceSchema */ } = {},
+              // schema: requestedSchema,
+              [GRAPHQL_OPTIONS_KEY]: graphql = {}, // optional ptions to be passed to graphql. ie name, description, deprecationReason
             } = schemaValue;
 
             /**
-             * Example: 
+             * Example:
              * bar: {
              *   type: [String],
              *   required?: true,
@@ -89,21 +70,37 @@ const compileSchema =  async (filePattern = '!(node_modules)/**/schema.js') => {
 
             const typeValue = isTypeAnArray ? type[0] : type;
 
+            const actualType = (() => {
+              if (required) {
+                if (isArray || isTypeAnArray) {
+                  return GraphQLList(GraphQLNonNull(typeValue));
+                }
+                return GraphQLNonNull(type);
+              }
+
+              if (isArray || isTypeAnArray) {
+                return GraphQLList(typeValue);
+              }
+
+              return type;
+            })();
+
             return {
               ...final,
               [key]: {
                 args: sourceArgs ? createArgumentConfig(sourceArgs) : undefined,
-                type: required
-                  ? isArray || isTypeAnArray ? GraphQLList(GraphQLNonNull(typeValue)) : GraphQLNonNull(type)
-                  : isArray || isTypeAnArray ? GraphQLList(typeValue) : type,
-                resolve: resolver ? async (...args) => {
-                  const resolved = await resolver(...args);
-                  return resolved
-                } : () => key,
+                type: actualType,
+                resolve: resolver
+                  ? async (...args) => {
+                      const resolved = await resolver(...args);
+                      return resolved;
+                    }
+                  : () => key,
                 ...graphql,
-              }
+              },
             };
-          } else if (isNestedObject(schemaValue) && key !== GRAPHQL_OPTIONS_KEY) {
+          }
+          if (isNestedObject(schemaValue) && key !== GRAPHQL_OPTIONS_KEY) {
             /**
              * Example:
              * test: {
@@ -115,12 +112,12 @@ const compileSchema =  async (filePattern = '!(node_modules)/**/schema.js') => {
              * }
              */
 
-             // generate a unique name (or the the one provided)
+            // generate a unique name (or the the one provided)
             const {
               graphql: {
                 args,
-                name: typeName = (previousName || name) ? `${previousName || name}_${key}` : key,
-              } = {}
+                name: typeName = previousName || name ? `${previousName || name}_${key}` : key,
+              } = {},
             } = schemaValue;
 
             const graphql = {
@@ -134,22 +131,22 @@ const compileSchema =  async (filePattern = '!(node_modules)/**/schema.js') => {
             // Create the type or find it from the types already created
             const type = (() => {
               if (nestedTypes.has(schemaValue)) {
-                console.log('using cached type');
                 return nestedTypes.get(schemaValue);
               }
 
               if (typeNames.has(typeName)) {
-                throw new Error(`A duplicate name already exists for ${typeName}.  Please create a new name or reference the same schema`)
+                throw new Error(
+                  `A duplicate name already exists for ${typeName}.  Please create a new name or reference the same schema`,
+                );
               }
-  
+
               typeNames.add(typeName);
 
-              const type = createOutputType({ ...graphql, ...schemaValue }, fields);
+              const outputType = createOutputType({ ...graphql, ...schemaValue }, fields);
 
-              nestedTypes.set(schemaValue, type);
+              nestedTypes.set(schemaValue, outputType);
 
-              return type;
-
+              return outputType;
             })();
 
             return {
@@ -158,13 +155,14 @@ const compileSchema =  async (filePattern = '!(node_modules)/**/schema.js') => {
                 args: createArgumentConfig(args, typeName),
                 type: isArray ? GraphQLList(type) : type,
                 resolve: () => key,
-              }
+              },
             };
           }
-        }, {})
-      );
 
-      const graphql = { description, deprecationReason, name }
+          return final;
+        }, {});
+
+      const graphql = { description, deprecationReason, name };
 
       return {
         ...fullSchema,
@@ -174,39 +172,51 @@ const compileSchema =  async (filePattern = '!(node_modules)/**/schema.js') => {
             resolve,
             args: createArgumentConfig(parentArgs, name),
             type: createOutputType({ graphql }, compile(schemaContent)),
-          }
+          },
         },
         mutation: {
           ...fullSchema.mutation,
-          ...Object.entries(mutation).reduce((mutations, [key, { args, schema, ...graphql }]) => (
-            {
+          ...Object.entries(schemaMutation).reduce(
+            (mutations, [key, { args, schema, ...graphqlSettings }]) => ({
               ...mutations,
               [key]: {
                 resolve,
                 args: createArgumentConfig(args),
-                type: createOutputType({ graphql }, compile(schema)),
-              }
-            }
-          ), {})
-        }
-      }
+                type: createOutputType({ graphql: graphqlSettings }, compile(schema)),
+              },
+            }),
+            {},
+          ),
+        },
+      };
     }, {});
 
     return new GraphQLSchema({
-      ...(Object.keys(query).length && { query: createOutputType({
-        graphql: {
-          name: 'RootQueryType',
-        }
-      }, query) }),
-      ...(Object.keys(mutation).length && { mutation: createOutputType({
-        graphql: {
-          name: 'RootMutationType'
-        }
-      }, mutation) })
+      ...(Object.keys(query).length && {
+        query: createOutputType(
+          {
+            graphql: {
+              name: 'RootQueryType',
+            },
+          },
+          query,
+        ),
+      }),
+      ...(Object.keys(mutation).length && {
+        mutation: createOutputType(
+          {
+            graphql: {
+              name: 'RootMutationType',
+            },
+          },
+          mutation,
+        ),
+      }),
     });
-  } catch(e) {
+  } catch (e) {
     console.error(e);
+    throw new Error('An unexpected error during schema compilation');
   }
-}
+};
 
 module.exports = compileSchema;

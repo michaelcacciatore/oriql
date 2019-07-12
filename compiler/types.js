@@ -1,34 +1,23 @@
-const { sep } = require('path');
+const { GRAPHQL_PATH, GRAPHQL_OPTIONS_KEY } = require('../constants');
 
-const {
-  GraphQLObjectType,
-  GraphQLInputObjectType,
-} = require(`${process.cwd()}${sep}node_modules${sep}graphql`);
-
-const {
-  GRAPHQL_OPTIONS_KEY,
-} = require('../constants');
+const { GraphQLObjectType, GraphQLInputObjectType } = require(GRAPHQL_PATH);
 
 const createInputType = (type, fields) => {
-  const {
-    [GRAPHQL_OPTIONS_KEY]: graphQLOptions = {},
-  } = type;
+  const { [GRAPHQL_OPTIONS_KEY]: graphQLOptions = {} } = type;
 
   return new GraphQLInputObjectType({
     fields,
-    ...graphQLOptions
-  })
+    ...graphQLOptions,
+  });
 };
 
 const createOutputType = (type, fields) => {
-  const {
-    [GRAPHQL_OPTIONS_KEY]: graphQLOptions = {},
-  } = type;
+  const { [GRAPHQL_OPTIONS_KEY]: graphQLOptions = {} } = type;
 
   return new GraphQLObjectType({
     fields,
-    ...graphQLOptions
-  })
+    ...graphQLOptions,
+  });
 };
 
 module.exports = {
