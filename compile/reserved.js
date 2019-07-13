@@ -1,6 +1,6 @@
 const { GRAPHQL_OPTIONS_KEY } = require('../constants');
 
-const reservedWords = ['type', 'required', 'source', 'extends', GRAPHQL_OPTIONS_KEY];
+const reservedWords = ['type', 'required', 'source', 'extends', 'schema', GRAPHQL_OPTIONS_KEY];
 
 const reserverdKeys = reservedWords.reduce(
   (reserved, word) => ({

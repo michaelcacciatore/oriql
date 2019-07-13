@@ -1,4 +1,4 @@
-const { GRAPHQL_PATH, ROOT_OPTIONS_KEY } = require('../constants');
+const { GRAPHQL_PATH } = require('../constants');
 
 const { isOutputType, isInputType } = require(GRAPHQL_PATH);
 
@@ -17,11 +17,15 @@ const isGraphQLInputType = obj =>
   typeof obj === 'object' &&
   isInputType(Array.isArray(obj.type) ? obj.type[0] : obj.type);
 
-const isRoot = (key, value) => key === ROOT_OPTIONS_KEY && value === true;
+const isSource = obj =>
+  !Array.isArray(obj) &&
+  typeof obj === 'object' &&
+  typeof obj.source === 'object' &&
+  typeof obj.source.resolver === 'function';
 
 module.exports = {
   isNestedObject,
   isGraphQLOutputType,
   isGraphQLInputType,
-  isRoot,
+  isSource,
 };

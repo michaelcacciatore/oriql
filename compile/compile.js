@@ -6,8 +6,9 @@ const { GRAPHQL_OPTIONS_KEY, GRAPHQL_PATH, resolve } = require('../constants');
 const { GraphQLNonNull, GraphQLList, GraphQLSchema, isOutputType } = require(GRAPHQL_PATH);
 
 const createArgumentConfig = require('./arguments');
-const { isGraphQLOutputType, isNestedObject } = require('./helpers');
+const { isGraphQLOutputType, isNestedObject, isSource } = require('./helpers');
 const { createOutputType } = require('./types');
+const consolidate = require('../utils/consolidate');
 
 const findFiles = promisify(glob);
 
@@ -26,7 +27,7 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
         mutation: schemaMutation = {},
       } = require(`${process.cwd()}${sep}${file}`); // eslint-disable-line global-require
 
-      const compile = (schema, previousName) =>
+      const compile = (schema, previousName, includeResolver = false) =>
         Object.entries(schema).reduce((final, [key, value]) => {
           const isArray = Array.isArray(value);
           const schemaValue = isArray ? value[0] : value;
@@ -39,7 +40,7 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
               ...final,
               [key]: {
                 type: isArray ? GraphQLList(schemaValue) : schemaValue,
-                resolve: () => key,
+                resolve: !includeResolver ? () => key : undefined,
               },
             };
           }
@@ -55,7 +56,7 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
               type,
               required = false,
               source: { resolver, args: sourceArgs /* schema: sourceSchema */ } = {},
-              // schema: requestedSchema,
+              schema: requestedSchema,
               [GRAPHQL_OPTIONS_KEY]: graphql = {}, // optional ptions to be passed to graphql. ie name, description, deprecationReason
             } = schemaValue;
 
@@ -75,14 +76,14 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
                 if (isArray || isTypeAnArray) {
                   return GraphQLList(GraphQLNonNull(typeValue));
                 }
-                return GraphQLNonNull(type);
+                return GraphQLNonNull(typeValue);
               }
 
               if (isArray || isTypeAnArray) {
                 return GraphQLList(typeValue);
               }
 
-              return type;
+              return typeValue;
             })();
 
             return {
@@ -93,7 +94,7 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
                 resolve: resolver
                   ? async (...args) => {
                       const resolved = await resolver(...args);
-                      return resolved;
+                      return consolidate(resolved, requestedSchema);
                     }
                   : () => key,
                 ...graphql,
@@ -118,6 +119,8 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
                 args,
                 name: typeName = previousName || name ? `${previousName || name}_${key}` : key,
               } = {},
+              source: { resolver, args: sourceArgs = {} /* schema: sourceSchema */ } = {},
+              schema: requestedSchema = {},
             } = schemaValue;
 
             const graphql = {
@@ -126,12 +129,23 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
               },
             };
 
+            const isSchemaASource = isSource(schemaValue);
+
+            const isSourceAnArray = Array.isArray(requestedSchema);
+
+            const schemaToCompile = (() => {
+              if (isSchemaASource) {
+                return isSourceAnArray ? requestedSchema[0] : requestedSchema;
+              }
+              return schemaValue;
+            })();
+
             // recursively create the fields for this object
-            const fields = compile(schemaValue, typeName);
+            const fields = compile(schemaToCompile, typeName, isSchemaASource);
             // Create the type or find it from the types already created
             const type = (() => {
-              if (nestedTypes.has(schemaValue)) {
-                return nestedTypes.get(schemaValue);
+              if (nestedTypes.has(schemaToCompile)) {
+                return nestedTypes.get(schemaToCompile);
               }
 
               if (typeNames.has(typeName)) {
@@ -142,9 +156,9 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
 
               typeNames.add(typeName);
 
-              const outputType = createOutputType({ ...graphql, ...schemaValue }, fields);
+              const outputType = createOutputType({ ...graphql, ...schemaToCompile }, fields);
 
-              nestedTypes.set(schemaValue, outputType);
+              nestedTypes.set(schemaToCompile, outputType);
 
               return outputType;
             })();
@@ -152,9 +166,15 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
             return {
               ...final,
               [key]: {
-                args: createArgumentConfig(args, typeName),
-                type: isArray ? GraphQLList(type) : type,
-                resolve: () => key,
+                args: createArgumentConfig({ ...sourceArgs, ...args }, typeName),
+                type: isArray || isSourceAnArray ? GraphQLList(type) : type,
+                resolve: resolver
+                  ? async (...arg) => {
+                      const resolved = await resolver(...arg);
+                      console.log(resolved, requestedSchema);
+                      return consolidate(resolved, requestedSchema);
+                    }
+                  : () => key,
               },
             };
           }
