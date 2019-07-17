@@ -1,6 +1,7 @@
 const { sep } = require('path');
-const { GRAPHQL_OPTIONS_KEY } = require('../constants');
+const { GRAPHQL_OPTIONS_KEY, ROOT_OPTIONS_KEY } = require('../constants');
 const { isNestedObject, isSource, getOutputType } = require('./helpers');
+const getNumberOfQueries = require('../utils/getNumberOfQueries');
 
 const createArgumentQuery = schema => {
   const args = isSource(schema) ? schema.source.args : schema.args;
@@ -24,16 +25,23 @@ const compileSchema = schema => {
       return `${client} ${key}${args}`;
     }
     if (isSource(currentField)) {
-      return `${client} ${key}${args} ${compileSchema(
-        Array.isArray(currentField.schema) ? currentField.schema[0] : currentField.schema,
-      )}`;
+      const schemaValue = Array.isArray(currentField.schema)
+        ? currentField.schema[0]
+        : currentField.schema;
+      const numberOfQueries = getNumberOfQueries(schemaValue);
+
+      if (numberOfQueries === 1) {
+        return `${client} ${key}${args}`;
+      }
+
+      return `${client} ${key}${args} ${compileSchema(schemaValue)}`;
     }
     if (isNestedObject(currentField) && key !== GRAPHQL_OPTIONS_KEY) {
       return `${client} ${key}${args} ${compileSchema(
         Array.isArray(currentField) ? currentField[0] : currentField,
       )}`;
     }
-    if (key !== GRAPHQL_OPTIONS_KEY) {
+    if (key !== GRAPHQL_OPTIONS_KEY && key !== ROOT_OPTIONS_KEY) {
       console.warn(`Could not determine the GraphQL type of ${key}`);
     }
 

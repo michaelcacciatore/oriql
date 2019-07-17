@@ -10,6 +10,8 @@ const compileClient = require('./client');
 const { isGraphQLOutputType, isNestedObject, isSource } = require('./helpers');
 const { createOutputType } = require('./types');
 const consolidate = require('../utils/consolidate');
+const hasRoot = require('../utils/hasRoot');
+const getNumberOfQueries = require('../utils/getNumberOfQueries');
 
 const findFiles = promisify(glob);
 
@@ -141,6 +143,34 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
               return schemaValue;
             })();
 
+            if (isSchemaASource && !schemaToCompile.type) {
+              const numberOfQueries = getNumberOfQueries(requestedSchema, true);
+              const sourceHasRoot = hasRoot(schema);
+              if (numberOfQueries.length === 1 && !sourceHasRoot) {
+                return {
+                  ...final,
+                  [key]: {
+                    args: createArgumentConfig(
+                      {
+                        ...sourceArgs,
+                        ...args,
+                      },
+                      typeName,
+                    ),
+                    type: Array.isArray(numberOfQueries[0])
+                      ? GraphQLList(numberOfQueries[0])
+                      : numberOfQueries[0],
+                    resolve: resolver
+                      ? async (...arg) => {
+                          const resolved = await resolver(...arg);
+                          return consolidate(resolved, requestedSchema);
+                        }
+                      : () => key,
+                  },
+                };
+              }
+            }
+
             // recursively create the fields for this object
             const fields = compile(schemaToCompile, typeName, isSchemaASource);
             // Create the type or find it from the types already created
@@ -184,7 +214,6 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
                 resolve: resolver
                   ? async (...arg) => {
                       const resolved = await resolver(...arg);
-                      console.log(resolved, requestedSchema);
                       return consolidate(resolved, requestedSchema);
                     }
                   : () => key,
