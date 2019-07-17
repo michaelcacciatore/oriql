@@ -6,6 +6,7 @@ const { GRAPHQL_OPTIONS_KEY, GRAPHQL_PATH, resolve } = require('../constants');
 const { GraphQLNonNull, GraphQLList, GraphQLSchema, isOutputType } = require(GRAPHQL_PATH);
 
 const createArgumentConfig = require('./arguments');
+const compileClient = require('./client');
 const { isGraphQLOutputType, isNestedObject, isSource } = require('./helpers');
 const { createOutputType } = require('./types');
 const consolidate = require('../utils/consolidate');
@@ -156,7 +157,13 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
 
               typeNames.add(typeName);
 
-              const outputType = createOutputType({ ...graphql, ...schemaToCompile }, fields);
+              const outputType = createOutputType(
+                {
+                  ...graphql,
+                  ...schemaToCompile,
+                },
+                fields,
+              );
 
               nestedTypes.set(schemaToCompile, outputType);
 
@@ -166,7 +173,13 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
             return {
               ...final,
               [key]: {
-                args: createArgumentConfig({ ...sourceArgs, ...args }, typeName),
+                args: createArgumentConfig(
+                  {
+                    ...sourceArgs,
+                    ...args,
+                  },
+                  typeName,
+                ),
                 type: isArray || isSourceAnArray ? GraphQLList(type) : type,
                 resolve: resolver
                   ? async (...arg) => {
@@ -182,7 +195,11 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
           return final;
         }, {});
 
-      const graphql = { description, deprecationReason, name };
+      const graphql = {
+        description,
+        deprecationReason,
+        name,
+      };
 
       return {
         ...fullSchema,
@@ -191,7 +208,12 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
           [name]: {
             resolve,
             args: createArgumentConfig(parentArgs, name),
-            type: createOutputType({ graphql }, compile(schemaContent)),
+            type: createOutputType(
+              {
+                graphql,
+              },
+              compile(schemaContent),
+            ),
           },
         },
         mutation: {
@@ -202,7 +224,12 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
               [key]: {
                 resolve,
                 args: createArgumentConfig(args),
-                type: createOutputType({ graphql: graphqlSettings }, compile(schema)),
+                type: createOutputType(
+                  {
+                    graphql: graphqlSettings,
+                  },
+                  compile(schema),
+                ),
               },
             }),
             {},
@@ -211,7 +238,7 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
       };
     }, {});
 
-    return new GraphQLSchema({
+    const server = new GraphQLSchema({
       ...(Object.keys(query).length && {
         query: createOutputType(
           {
@@ -233,6 +260,13 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
         ),
       }),
     });
+
+    const client = compileClient(schemaFiles);
+
+    return {
+      client,
+      server,
+    };
   } catch (e) {
     console.error(e);
     throw new Error('An unexpected error during schema compilation');
