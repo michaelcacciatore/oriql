@@ -23,9 +23,23 @@ const isSource = obj =>
   typeof obj.source === 'object' &&
   typeof obj.source.resolver === 'function';
 
+const getOutputType = obj => {
+  const type = Array.isArray(obj) ? obj[0] : obj;
+  const isGraphQLOutput = isGraphQLOutputType(type);
+  const isOutput = isOutputType(type);
+  if (isGraphQLOutput || isOutput) {
+    return {
+      type,
+    };
+  }
+
+  return {};
+};
+
 module.exports = {
   isNestedObject,
   isGraphQLOutputType,
   isGraphQLInputType,
   isSource,
+  getOutputType,
 };

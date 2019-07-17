@@ -1,38 +1,8 @@
-const { GRAPHQL_PATH, ROOT_OPTIONS_KEY } = require('../constants');
-
-const { isOutputType } = require(GRAPHQL_PATH);
-const findPredicates = require('./findPredicates');
+const { ROOT_OPTIONS_KEY } = require('../constants');
 const getAll = require('./getAll');
-
-const isRoot = (key, value) => key === ROOT_OPTIONS_KEY && value === true;
-
-const getRoot = obj => {
-  const findRoot = value => {
-    const keys = Object.keys(value);
-
-    for (let i = 0; i < keys.length; i += 1) {
-      const key = keys[i];
-      const property = value[key];
-      if (typeof property === 'object') {
-        if (Array.isArray(property)) {
-          return property.map(field => findRoot(field));
-        }
-
-        return findRoot(property);
-      }
-
-      if (isRoot(key, property)) {
-        const { root, ...values } = value;
-
-        return values;
-      }
-    }
-
-    return value;
-  };
-
-  return findRoot(obj);
-};
+const getRoot = require('./getRoot');
+const getNumberOfQueries = require('./getNumberOfQueries');
+const hasRoot = require('./hasRoot');
 
 const getCurrentSchema = (potentialSchema = {}) =>
   Array.isArray(potentialSchema) ? potentialSchema[0] : potentialSchema;
@@ -103,12 +73,9 @@ const consolidate = (response, schema, returnSingleValue = true) => {
     return result;
   }
 
-  const numofResults = findPredicates(
-    schema,
-    value => isOutputType(value) || (Array.isArray(value) && isOutputType(value[0])),
-  );
-  const schemaHasRoot = findPredicates(schema, (value, key) => isRoot(key, value)).length === 1;
-
+  const numofResults = getNumberOfQueries(schema);
+  const schemaHasRoot = hasRoot(schema);
+  console.log(response, result, schema);
   if (schemaHasRoot) {
     return getRoot(result);
   }
