@@ -6,10 +6,13 @@ const getNumberOfQueries = require('../utils/getNumberOfQueries');
 const compiledMutationsCache = new Map();
 
 const createArgumentQuery = schema => {
-  const args = isSource(schema) ? schema.source.args : schema.args;
+  const args = isSource(schema)
+    ? schema.source.args
+    : (schema.graphql && schema.graphql.args) || schema.args;
   if (args) {
     const argumentConfig = Object.keys(args).reduce((query, arg) => {
-      return `${query}${query.length !== 1 ? ' ' : ''}${arg}: $${arg},`;
+      const { type = arg } = arg;
+      return `${query}${query.length !== 1 ? ' ' : ''}${arg}: $${type},`;
     }, '(');
 
     return `${argumentConfig.substr(0, argumentConfig.length - 1)})`;
@@ -95,13 +98,13 @@ const compileClientMutation = (mutations = {}) => {
 const compileClient = schemaFiles => {
   return schemaFiles.reduce((client, file) => {
     const schemaContents = require(`${process.cwd()}${sep}${file}`); // eslint-disable-line global-require
-    const { name, schema, mutation } = schemaContents;
+    const { args, name, schema, mutation } = schemaContents;
 
     const compiledMutations = compileClientMutation(mutation);
 
     return {
       ...client,
-      [name]: `${name} ${compileClientQuery(schema)}`,
+      [name]: `${name}${createArgumentQuery({ args })} ${compileClientQuery(schema, args)}`,
       mutations: {
         ...(client.mutations || {}),
         [name]: compiledMutations,

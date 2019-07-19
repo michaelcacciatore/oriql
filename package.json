@@ -4,8 +4,7 @@
   "description": "A simple and effective schema management tool for GraphQL",
   "main": "index.js",
   "scripts": {
-    "test": "jest",
-    "prettier:list": "prettier -l"
+    "test": "jest"
   },
   "repository": {
     "type": "git",
