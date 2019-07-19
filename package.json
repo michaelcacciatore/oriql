@@ -1,10 +1,11 @@
 {
   "name": "oriql",
-  "version": "0.1.0-alpha.5",
+  "version": "0.1.0-alpha.6",
   "description": "A simple and effective schema management tool for GraphQL",
   "main": "index.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "prettier:list": "prettier -l"
   },
   "repository": {
     "type": "git",

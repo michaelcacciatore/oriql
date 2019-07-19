@@ -75,7 +75,7 @@ const consolidate = (response, schema, returnSingleValue = true) => {
 
   const numofResults = getNumberOfQueries(schema);
   const schemaHasRoot = hasRoot(schema);
-  console.log(response, result, schema);
+
   if (schemaHasRoot) {
     return getRoot(result);
   }

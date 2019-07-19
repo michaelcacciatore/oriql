@@ -3,6 +3,8 @@ const { GRAPHQL_OPTIONS_KEY, ROOT_OPTIONS_KEY } = require('../constants');
 const { isNestedObject, isSource, getOutputType } = require('./helpers');
 const getNumberOfQueries = require('../utils/getNumberOfQueries');
 
+const compiledMutationsCache = new Map();
+
 const createArgumentQuery = schema => {
   const args = isSource(schema) ? schema.source.args : schema.args;
   if (args) {
@@ -16,7 +18,7 @@ const createArgumentQuery = schema => {
   return '';
 };
 
-const compileSchema = schema => {
+const compileClientQuery = schema => {
   const start = Object.keys(schema).reduce((client, key) => {
     const currentField = Array.isArray(schema[key]) ? schema[key][0] : schema[key];
     const { type } = getOutputType(currentField);
@@ -34,10 +36,10 @@ const compileSchema = schema => {
         return `${client} ${key}${args}`;
       }
 
-      return `${client} ${key}${args} ${compileSchema(schemaValue)}`;
+      return `${client} ${key}${args} ${compileClientQuery(schemaValue)}`;
     }
     if (isNestedObject(currentField) && key !== GRAPHQL_OPTIONS_KEY) {
-      return `${client} ${key}${args} ${compileSchema(
+      return `${client} ${key}${args} ${compileClientQuery(
         Array.isArray(currentField) ? currentField[0] : currentField,
       )}`;
     }
@@ -51,14 +53,59 @@ const compileSchema = schema => {
   return `${start} }`;
 };
 
+const compileClientMutation = (mutations = {}) => {
+  const compile = mutation => {
+    const { args, name, schema } = mutation;
+
+    const fakedQuery = {
+      [name]: {
+        schema,
+        source: {
+          resolver: () => {}, // needed for isSoure() === true
+          args,
+        },
+      },
+    };
+
+    const compiledMutation = compileClientQuery(fakedQuery);
+
+    const formattedMutation = compiledMutation.slice(2, compiledMutation.length - 2);
+
+    compiledMutationsCache.set(mutation, formattedMutation);
+
+    return formattedMutation;
+  };
+
+  return Object.keys(mutations).reduce((allMutations, mutation) => {
+    const { name } = mutations[mutation];
+    if (compiledMutationsCache.has(mutations[mutation])) {
+      return {
+        ...allMutations,
+        [name]: compiledMutationsCache.get(mutations[mutation]),
+      };
+    }
+
+    return {
+      ...allMutations,
+      [name]: compile(mutations[mutation]),
+    };
+  }, {});
+};
+
 const compileClient = schemaFiles => {
   return schemaFiles.reduce((client, file) => {
     const schemaContents = require(`${process.cwd()}${sep}${file}`); // eslint-disable-line global-require
-    const { name, schema } = schemaContents;
+    const { name, schema, mutation } = schemaContents;
+
+    const compiledMutations = compileClientMutation(mutation);
 
     return {
       ...client,
-      [name]: `${name} ${compileSchema(schema)}`,
+      [name]: `${name} ${compileClientQuery(schema)}`,
+      mutations: {
+        ...(client.mutations || {}),
+        [name]: compiledMutations,
+      },
     };
   }, {});
 };

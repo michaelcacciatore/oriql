@@ -8,7 +8,7 @@ const { GraphQLNonNull, GraphQLList, GraphQLSchema, isOutputType } = require(GRA
 const createArgumentConfig = require('./arguments');
 const compileClient = require('./client');
 const { isGraphQLOutputType, isNestedObject, isSource } = require('./helpers');
-const { createOutputType } = require('./types');
+const { createOutputType, generateOutputType } = require('./types');
 const consolidate = require('../utils/consolidate');
 const hasRoot = require('../utils/hasRoot');
 const getNumberOfQueries = require('../utils/getNumberOfQueries');
@@ -18,8 +18,6 @@ const findFiles = promisify(glob);
 const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
   try {
     const schemaFiles = await findFiles(filePattern);
-    const nestedTypes = new Map();
-    const typeNames = new Set();
     const { query, mutation } = schemaFiles.reduce((fullSchema, file) => {
       const {
         args: parentArgs = {},
@@ -170,35 +168,13 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
                 };
               }
             }
-
-            // recursively create the fields for this object
-            const fields = compile(schemaToCompile, typeName, isSchemaASource);
             // Create the type or find it from the types already created
-            const type = (() => {
-              if (nestedTypes.has(schemaToCompile)) {
-                return nestedTypes.get(schemaToCompile);
-              }
-
-              if (typeNames.has(typeName)) {
-                throw new Error(
-                  `A duplicate name already exists for ${typeName}.  Please create a new name or reference the same schema`,
-                );
-              }
-
-              typeNames.add(typeName);
-
-              const outputType = createOutputType(
-                {
-                  ...graphql,
-                  ...schemaToCompile,
-                },
-                fields,
-              );
-
-              nestedTypes.set(schemaToCompile, outputType);
-
-              return outputType;
-            })();
+            const type = generateOutputType({
+              graphql,
+              fields: () => compile(schemaToCompile, typeName, isSchemaASource),
+              name: typeName,
+              schema: schemaToCompile,
+            });
 
             return {
               ...final,
@@ -237,28 +213,33 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
           [name]: {
             resolve,
             args: createArgumentConfig(parentArgs, name),
-            type: createOutputType(
-              {
-                graphql,
-              },
-              compile(schemaContent),
-            ),
+            type: generateOutputType({
+              name,
+              graphql,
+              schema: schemaContent,
+              fields: () => compile(schemaContent),
+            }),
           },
         },
         mutation: {
           ...fullSchema.mutation,
           ...Object.entries(schemaMutation).reduce(
-            (mutations, [key, { args, schema, ...graphqlSettings }]) => ({
+            (mutations, [key, { args, resolver, schema, ...graphqlSettings }]) => ({
               ...mutations,
               [key]: {
-                resolve,
+                resolve: resolver
+                  ? async (...arg) => {
+                      const resolved = await resolver(...arg);
+                      return consolidate(resolved, schema);
+                    }
+                  : () => key,
                 args: createArgumentConfig(args),
-                type: createOutputType(
-                  {
-                    graphql: graphqlSettings,
-                  },
-                  compile(schema),
-                ),
+                type: generateOutputType({
+                  schema,
+                  name: key,
+                  graphql: graphqlSettings,
+                  fields: () => compile(schema, graphqlSettings.name, true),
+                }),
               },
             }),
             {},
