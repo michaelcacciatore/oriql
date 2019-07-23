@@ -14,4 +14,5 @@ module.exports = {
   Boolean: GraphQLBoolean,
   Number: GraphQLInt,
   ID: GraphQLID,
+  Integer: GraphQLInt,
 };

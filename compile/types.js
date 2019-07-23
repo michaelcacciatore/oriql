@@ -20,7 +20,40 @@ const createOutputType = (type, fields) => {
   });
 };
 
+const typeCache = new Map();
+const typeNames = new Set();
+
+const generateOutputType = ({ schema, name, graphql, fields }) => {
+  if (typeCache.has(schema)) {
+    return typeCache.get(schema);
+  }
+
+  if (typeNames.has(name)) {
+    throw new Error(
+      `A duplicate name already exists for ${name}.  Please create a new name or reference the same schema`,
+    );
+  }
+
+  typeNames.add(name);
+
+  const outputType = createOutputType(
+    {
+      graphql: {
+        name,
+        ...graphql,
+      },
+      ...schema,
+    },
+    typeof fields === 'function' ? fields() : fields,
+  );
+
+  typeCache.set(schema, outputType);
+
+  return outputType;
+};
+
 module.exports = {
   createInputType,
   createOutputType,
+  generateOutputType,
 };
