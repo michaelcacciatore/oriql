@@ -95,9 +95,11 @@ const compileClientMutation = (mutations = {}) => {
   }, {});
 };
 
-const compileClient = schemaFiles => {
-  return schemaFiles.reduce((client, file) => {
-    const schemaContents = require(`${process.cwd()}${sep}${file}`); // eslint-disable-line global-require
+const compileClient = schemaFiles =>
+  schemaFiles.reduce((client, file) => {
+    const schemaContents =
+      // Would be string if a regex pattern was provided
+      typeof file === 'string' ? require(`${process.cwd()}${sep}${file}`) : file; // eslint-disable-line global-require
     const { args, name, schema, mutation } = schemaContents;
 
     const compiledMutations = compileClientMutation(mutation);
@@ -111,6 +113,5 @@ const compileClient = schemaFiles => {
       },
     };
   }, {});
-};
 
 module.exports = compileClient;
