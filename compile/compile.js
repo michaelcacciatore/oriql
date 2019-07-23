@@ -15,9 +15,16 @@ const getNumberOfQueries = require('../utils/getNumberOfQueries');
 
 const findFiles = promisify(glob);
 
-const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
+const compileSchema = async config => {
+  const {
+    client = false,
+    defaultResolver = (root, _, extensions, { path: { key: fieldKey } }) => fieldKey,
+    pattern = '!(node_modules)/**/schema.js',
+    schema,
+    server = false,
+  } = config;
   try {
-    const schemaFiles = await findFiles(filePattern);
+    const schemaFiles = schema || (await findFiles(pattern));
     const { query, mutation } = schemaFiles.reduce((fullSchema, file) => {
       const {
         args: parentArgs = {},
@@ -26,10 +33,10 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
         name,
         schema: schemaContent = {},
         mutation: schemaMutation = {},
-      } = require(`${process.cwd()}${sep}${file}`); // eslint-disable-line global-require
+      } = schema ? file : require(`${process.cwd()}${sep}${file}`); // eslint-disable-line global-require
 
-      const compile = (schema, previousName, includeResolver = false) =>
-        Object.entries(schema).reduce((final, [key, value]) => {
+      const compile = (compiledSchema, previousName, includeResolver = false) =>
+        Object.entries(compiledSchema).reduce((final, [key, value]) => {
           const isArray = Array.isArray(value);
           const schemaValue = isArray ? value[0] : value;
           if (isOutputType(schemaValue)) {
@@ -41,7 +48,7 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
               ...final,
               [key]: {
                 type: isArray ? GraphQLList(schemaValue) : schemaValue,
-                resolve: !includeResolver ? () => key : undefined,
+                resolve: !includeResolver ? defaultResolver : undefined,
               },
             };
           }
@@ -97,7 +104,7 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
                       const resolved = await resolver(...args);
                       return consolidate(resolved, requestedSchema);
                     }
-                  : () => key,
+                  : defaultResolver,
                 ...graphql,
               },
             };
@@ -143,7 +150,7 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
 
             if (isSchemaASource && !schemaToCompile.type) {
               const numberOfQueries = getNumberOfQueries(requestedSchema, true);
-              const sourceHasRoot = hasRoot(schema);
+              const sourceHasRoot = hasRoot(compiledSchema);
               if (numberOfQueries.length === 1 && !sourceHasRoot) {
                 return {
                   ...final,
@@ -163,7 +170,7 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
                           const resolved = await resolver(...arg);
                           return consolidate(resolved, requestedSchema);
                         }
-                      : () => key,
+                      : defaultResolver,
                   },
                 };
               }
@@ -192,7 +199,7 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
                       const resolved = await resolver(...arg);
                       return consolidate(resolved, requestedSchema);
                     }
-                  : () => key,
+                  : defaultResolver,
               },
             };
           }
@@ -224,21 +231,21 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
         mutation: {
           ...fullSchema.mutation,
           ...Object.entries(schemaMutation).reduce(
-            (mutations, [key, { args, resolver, schema, ...graphqlSettings }]) => ({
+            (mutations, [key, { args, resolver, schema: mutationSchema, ...graphqlSettings }]) => ({
               ...mutations,
               [key]: {
                 resolve: resolver
                   ? async (...arg) => {
                       const resolved = await resolver(...arg);
-                      return consolidate(resolved, schema);
+                      return consolidate(resolved, mutationSchema);
                     }
-                  : () => key,
+                  : defaultResolver,
                 args: createArgumentConfig(args),
                 type: generateOutputType({
-                  schema,
+                  schema: mutationSchema,
                   name: key,
                   graphql: graphqlSettings,
-                  fields: () => compile(schema, graphqlSettings.name, true),
+                  fields: () => compile(mutationSchema, graphqlSettings.name, true),
                 }),
               },
             }),
@@ -248,34 +255,37 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
       };
     }, {});
 
-    const server = new GraphQLSchema({
-      ...(Object.keys(query).length && {
-        query: createOutputType(
-          {
-            graphql: {
-              name: 'RootQueryType',
-            },
-          },
-          query,
-        ),
-      }),
-      ...(Object.keys(mutation).length && {
-        mutation: createOutputType(
-          {
-            graphql: {
-              name: 'RootMutationType',
-            },
-          },
-          mutation,
-        ),
-      }),
-    });
+    const serverSchema =
+      server || (!server && !client)
+        ? new GraphQLSchema({
+            ...(Object.keys(query).length && {
+              query: createOutputType(
+                {
+                  graphql: {
+                    name: 'RootQueryType',
+                  },
+                },
+                query,
+              ),
+            }),
+            ...(Object.keys(mutation).length && {
+              mutation: createOutputType(
+                {
+                  graphql: {
+                    name: 'RootMutationType',
+                  },
+                },
+                mutation,
+              ),
+            }),
+          })
+        : undefined;
 
-    const client = compileClient(schemaFiles);
+    const clientSchema = client || (!server && !client) ? compileClient(schemaFiles) : undefined;
 
     return {
-      client,
-      server,
+      client: clientSchema,
+      server: serverSchema,
     };
   } catch (e) {
     console.error(e);
@@ -283,4 +293,6 @@ const compileSchema = async (filePattern = '!(node_modules)/**/schema.js') => {
   }
 };
 
-module.exports = compileSchema;
+const compile = (config = {}) => compileSchema(config);
+
+module.exports = compile;
