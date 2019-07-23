@@ -1,6 +1,7 @@
 const { sep } = require('path');
 const { GRAPHQL_OPTIONS_KEY, ROOT_OPTIONS_KEY } = require('../constants');
 const { isNestedObject, isSource, getOutputType } = require('./helpers');
+const generateInstanceMap = require('./instances');
 const getNumberOfQueries = require('../utils/getNumberOfQueries');
 
 const compiledMutationsCache = new Map();
@@ -98,18 +99,25 @@ const compileClientMutation = (mutations = {}) => {
 const compileClient = schemaFiles =>
   schemaFiles.reduce((client, file) => {
     const schemaContents =
-      // Would be string if a regex pattern was provided
+      // Would be string if a regex pattern
       typeof file === 'string' ? require(`${process.cwd()}${sep}${file}`) : file; // eslint-disable-line global-require
-    const { args, name, schema, mutation } = schemaContents;
+    const { args, instances = [], name, schema: rawSchema, mutation } = schemaContents;
 
     const compiledMutations = compileClientMutation(mutation);
 
     return {
       ...client,
-      [name]: `${name}${createArgumentQuery({ args })} ${compileClientQuery(schema, args)}`,
+      instances: {
+        ...(client.instances || {}),
+        ...generateInstanceMap(instances, name),
+      },
       mutations: {
         ...(client.mutations || {}),
-        [name]: compiledMutations,
+        ...(Object.keys(compiledMutations).length ? { [name]: compiledMutations } : {}),
+      },
+      queries: {
+        ...(client.queries || {}),
+        [name]: `${name}${createArgumentQuery({ args })} ${compileClientQuery(rawSchema, args)}`,
       },
     };
   }, {});
