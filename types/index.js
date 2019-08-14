@@ -15,4 +15,11 @@ module.exports = {
   Number: GraphQLInt,
   ID: GraphQLID,
   Integer: GraphQLInt,
+  // Lower case to match flow/typescript types
+  string: GraphQLString,
+  float: GraphQLFloat,
+  boolean: GraphQLBoolean,
+  number: GraphQLInt,
+  id: GraphQLID,
+  integer: GraphQLInt,
 };

@@ -23,8 +23,10 @@
   },
   "homepage": "https://github.com/michaelcacciatore/oriql#readme",
   "dependencies": {
+    "flowgen": "1.10.0",
     "glob": "7.1.4",
-    "graphql": "14.4.2"
+    "graphql": "14.4.2",
+    "prettier": "1.18.2"
   },
   "resolutions": {
     "graphql": "14.4.2"
@@ -38,7 +40,6 @@
     "eslint-plugin-prettier": "^3.1.0",
     "eslint-plugin-react": "^7.14.2",
     "husky": "^3.0.0",
-    "lint-staged": "^9.2.0",
-    "prettier": "^1.18.2"
+    "lint-staged": "^9.2.0"
   }
 }
