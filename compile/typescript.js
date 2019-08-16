@@ -40,19 +40,22 @@ const compileTypescriptInterface = (schema, isTopLevel = false) => {
         const numberOfQueries = getNumberOfQueries(schemaValue);
 
         if (numberOfQueries === 1) {
-          return `${client}${key}?: ${createTypeIfArray(type, isSourceAnArray)}${ifRequiredType};`;
+          return `${client}${key}?: ${createTypeIfArray(
+            type,
+            isSourceAnArray || isArray,
+          )}${ifRequiredType};`;
         }
 
-        return `${client}${key}?: ${compileTypescriptInterface(schemaValue)}${ifRequiredType};`;
+        return `${client}${key}: ${createTypeIfArray(
+          compileTypescriptInterface(schemaValue),
+          isSourceAnArray || isArray,
+        )}${ifRequiredType};`;
       }
       if (isNestedObject(currentField) && key !== GRAPHQL_OPTIONS_KEY) {
-        return `${client}${key}?: ${createTypeIfArray(
-          compileTypescriptInterface(
-            Array.isArray(currentField) ? currentField[0] : currentField,
-            false,
-            true,
-          ),
-          isArray,
+        const isNestedObjectAnArray = Array.isArray(currentField);
+        return `${client}${key}: ${createTypeIfArray(
+          compileTypescriptInterface(isNestedObjectAnArray ? currentField[0] : currentField, false),
+          isNestedObjectAnArray || isArray,
         )}${ifRequiredType};`;
       }
       if (key !== GRAPHQL_OPTIONS_KEY && key !== ROOT_OPTIONS_KEY) {
