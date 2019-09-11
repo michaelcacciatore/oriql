@@ -1,0 +1,58 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Compiler should compile correctly 1`] = `
+Object {
+  "client": Object {
+    "instances": Object {
+      "testQuery": "testQuery",
+    },
+    "mutations": Object {
+      "testQuery": Object {
+        "getFirstName": "getFirstName(id: $id) { id employee_name employee_salary employee_age profile_image }",
+      },
+    },
+    "queries": Object {
+      "testQuery": "testQuery(foo: $foo, test: $test, id: $id) { foo lol bar test { michael brielle robert(foo: $foo, test: $test, nested: $nested) { itworks theresa } } mom { michael brielle robert(foo: $foo, test: $test, nested: $nested) { itworks theresa } } nestedNoName { hasObject double { isDouble } } firstName(id: $id) employees { id employee_name employee_salary employee_age profile_image } }",
+    },
+  },
+  "flow": undefined,
+  "server": GraphQLSchema {
+    "__allowedLegacyNames": Array [],
+    "__validationErrors": undefined,
+    "_directives": Array [
+      "@include",
+      "@skip",
+      "@deprecated",
+    ],
+    "_implementations": Object {},
+    "_mutationType": "RootMutationType",
+    "_possibleTypeMap": Object {},
+    "_queryType": "RootQueryType",
+    "_subscriptionType": undefined,
+    "_typeMap": Object {
+      "Boolean": "Boolean",
+      "MyTestType": "MyTestType",
+      "RootMutationType": "RootMutationType",
+      "RootQueryType": "RootQueryType",
+      "String": "String",
+      "__Directive": "__Directive",
+      "__DirectiveLocation": "__DirectiveLocation",
+      "__EnumValue": "__EnumValue",
+      "__Field": "__Field",
+      "__InputValue": "__InputValue",
+      "__Schema": "__Schema",
+      "__Type": "__Type",
+      "__TypeKind": "__TypeKind",
+      "dad": "dad",
+      "dadArgs": "dadArgs",
+      "testQuery": "testQuery",
+      "testQuery_employees": "testQuery_employees",
+      "testQuery_nestedNoName": "testQuery_nestedNoName",
+      "testQuery_nestedNoName_double": "testQuery_nestedNoName_double",
+    },
+    "astNode": undefined,
+    "extensionASTNodes": undefined,
+  },
+  "typescript": undefined,
+}
+`;

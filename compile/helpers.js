@@ -5,7 +5,7 @@ const { isOutputType, isInputType } = require(GRAPHQL_PATH);
 const isNestedObject = obj =>
   !Array.isArray(obj) &&
   typeof obj === 'object' &&
-  (typeof obj.type === 'undefined' || typeof obj.extends === 'undefined');
+  !(typeof obj.type !== 'undefined' || typeof obj.extends !== 'undefined');
 
 const isGraphQLOutputType = obj =>
   !Array.isArray(obj) &&
