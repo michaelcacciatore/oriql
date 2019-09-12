@@ -28,7 +28,7 @@ const getOutputType = obj => {
   const isGraphQLOutput = isGraphQLOutputType(type);
   if (isGraphQLOutput) {
     return {
-      type: obj.type,
+      type: Array.isArray(obj.type) ? obj.type[0] : obj.type,
     };
   }
   const isOutput = isOutputType(type);
