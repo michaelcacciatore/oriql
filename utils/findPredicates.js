@@ -1,3 +1,11 @@
+/**
+ * This returns an array of paths (that can then be ingested into getAll or lodash.get) where the predicate is true
+ * @param {Object} obj The object to search deeply
+ * @param {Function} predicate A function, when returns true, will satisfy the predicate and return the path in the final array
+ * @param {Boolean} returnValue If true, will return the value when the predicate is true instead of the path
+ * @param {String} existingPath
+ * @returns {String[]} The list of paths (or values) that satisifed the predicate in the object
+ */
 const findPredicates = (obj, predicate, returnValue = false, existingPath = '') => {
   let levels = 0;
   const find = (object, key) => {
