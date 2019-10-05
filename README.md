@@ -68,7 +68,7 @@ export default () => (
 
 - Server framework compatible with (at the very least) Apollo
   - Static schema compilation
-  - Input resolvers for each field in schema
+  - Generated resolvers for each field in schema
 - Client framework compatible with (at the very least) React and Apollo
   - Automatic query/mutation execution
   - Data reconciling based on query
