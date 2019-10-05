@@ -1,14 +1,13 @@
 const { promisify } = require('util');
 const { sep } = require('path');
 const glob = require('glob');
-const flowgen = require('flowgen');
-const { format } = require('prettier');
 const { GRAPHQL_OPTIONS_KEY, GRAPHQL_PATH, resolve } = require('../constants');
 
 const { GraphQLNonNull, GraphQLList, GraphQLSchema, isOutputType } = require(GRAPHQL_PATH);
 
 const createArgumentConfig = require('./arguments');
 const compileClient = require('./client');
+const compileFlowDefinitions = require('./flow');
 const { isGraphQLOutputType, isNestedObject, isSource } = require('./helpers');
 const { createOutputType, generateOutputType } = require('./types');
 const compileTypescriptDefinitions = require('./typescript');
@@ -291,9 +290,7 @@ const compileSchema = async config => {
     const typeScriptDefinitions =
       typescript || flow ? compileTypescriptDefinitions(schemaFiles) : undefined;
 
-    const flowDefinitions = flow
-      ? format(flowgen.compiler.compileDefinitionString(typeScriptDefinitions), { parser: 'flow' })
-      : undefined;
+    const flowDefinitions = flow ? compileFlowDefinitions(typeScriptDefinitions) : undefined;
 
     return {
       client: clientSchema,
