@@ -38,7 +38,7 @@ const compile = (schemaFiles, defaultResolver) =>
             name,
             graphql,
             schema: schemaContent,
-            fields: () => compileFields(schemaContent, name, true, defaultResolver),
+            fields: () => compileFields(schemaContent, name, false, defaultResolver),
           }),
         },
       },
