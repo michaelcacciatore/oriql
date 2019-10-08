@@ -1,4 +1,5 @@
 const { GRAPHQL_PATH } = require('../constants');
+const { consolidate } = require('../utils/consolidate');
 
 const { isOutputType, isInputType } = require(GRAPHQL_PATH);
 
@@ -41,7 +42,14 @@ const getOutputType = obj => {
   return {};
 };
 
+const defaultResolverFunction = (root, _, extensions, { path: { key: fieldKey } }) => fieldKey;
+
+const executeResolver = (resolver, schema) => async (...args) =>
+  consolidate(await resolver(...args), schema);
+
 module.exports = {
+  defaultResolverFunction,
+  executeResolver,
   isNestedObject,
   isGraphQLOutputType,
   isGraphQLInputType,

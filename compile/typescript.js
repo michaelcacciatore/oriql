@@ -1,4 +1,3 @@
-const { sep } = require('path');
 const { format } = require('prettier');
 const { GRAPHQL_OPTIONS_KEY, GRAPHQL_PATH, ROOT_OPTIONS_KEY } = require('../constants');
 
@@ -73,10 +72,7 @@ const compileTypescriptInterface = (schema, isTopLevel = false) => {
 const compileTypescriptDefinitions = schemaFiles => {
   const interfacesToExtend = {};
   const baseInterfaces = schemaFiles.reduce((client, file) => {
-    const schemaContents =
-      // Would be string if a regex pattern
-      typeof file === 'string' ? require(`${process.cwd()}${sep}${file}`) : file; // eslint-disable-line global-require
-    const { instances = [], name, schema: rawSchema } = schemaContents;
+    const { instances = [], name, schema: rawSchema } = file;
 
     interfacesToExtend[name] = instances;
 

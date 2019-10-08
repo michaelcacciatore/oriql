@@ -1,4 +1,3 @@
-const { sep } = require('path');
 const { GRAPHQL_OPTIONS_KEY, ROOT_OPTIONS_KEY } = require('../constants');
 const { isNestedObject, isSource, getOutputType } = require('./helpers');
 const generateInstanceMap = require('./instances');
@@ -98,10 +97,7 @@ const compileClientMutation = (mutations = {}) => {
 
 const compileClient = schemaFiles =>
   schemaFiles.reduce((client, file) => {
-    const schemaContents =
-      // Would be string if a regex pattern
-      typeof file === 'string' ? require(`${process.cwd()}${sep}${file}`) : file; // eslint-disable-line global-require
-    const { args, instances = [], name, schema: rawSchema, mutation } = schemaContents;
+    const { args, instances = [], name, schema: rawSchema, mutation } = file;
 
     const compiledMutations = compileClientMutation(mutation);
 
