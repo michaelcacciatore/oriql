@@ -25,11 +25,10 @@ const compileSchema = async config => {
     flow = false,
   } = config;
   try {
-    const schemaFiles = schema || (await findFiles(pattern));
-    const { query, mutation } = compile(
-      schemaFiles.map(file => (schema ? file : require(`${process.cwd()}${sep}${file}`))), // eslint-disable-line global-require
-      defaultResolver,
+    const schemaFiles = (schema || (await findFiles(pattern))).map(
+      file => (schema ? file : require(`${process.cwd()}${sep}${file}`)), // eslint-disable-line global-require
     );
+    const { query, mutation } = compile(schemaFiles, defaultResolver);
 
     const serverSchema =
       server || (!server && !client)
