@@ -10,7 +10,7 @@ const getNumberOfQueries = require('../utils/getNumberOfQueries');
 
 /**
  * Compiles a basic GraphQL schema field
- * @param {*} compiledSchema
+ * @param {Object[]} schema The schema field you wish to compile into an ingestible GraphQL format
  * @param {string} previousName The name of the parent schema object (if applicable)
  * @param {boolean} [includeResolver=false] A boolean deciding whether or not to include the default resolver
  * @param {function} defaultResolver The default resolver function to use in the schema

@@ -5,6 +5,11 @@ const { executeResolver } = require('./helpers');
 const compileFields = require('./fields');
 const { generateOutputType } = require('./types');
 
+/**
+ * Takes all the schema files and compiles both the queries and mutations
+ * @param {Object[]} schemaFiles The schema files to compile
+ * @param {function} defaultResolver The default resolver to use if none is provided in the field
+ */
 const compile = (schemaFiles, defaultResolver) =>
   schemaFiles.reduce((fullSchema, file) => {
     const {
