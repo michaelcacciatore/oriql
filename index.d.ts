@@ -1,5 +1,5 @@
 declare module 'oriql' {
-  import { GraphQLScalarType } from 'graphql';
+  import { GraphQLScalarType, GraphQLArgument, GraphQLSchema } from 'graphql';
 
   type SchemaValue = GraphQLScalarType | GraphQLScalarType[] | SchemaObject | SchemaObject[];
 
@@ -17,7 +17,14 @@ declare module 'oriql' {
     description?: string;
   }
 
-  interface SchemaSource {}
+  interface SchemaSource {
+    name: string;
+    args?: GraphQLArguments;
+    interceptor?: () => any | Promise<any>;
+    transformer?: () => any | Promise<any>;
+    resolver: () => any | Promise<any>;
+    schema: OriqlSchema | OriqlSchema[];
+  }
 
   interface SchemaObject {
     type?: GraphQLPrimitiveType;
@@ -46,7 +53,7 @@ declare module 'oriql' {
 
   export interface CompileConfig {
     client?: boolean;
-    defaultResolver?: () => void;
+    defaultResolver?: () => any;
     pattern?: string;
     schema?: OriqlSchemaObject[];
     server?: boolean;
