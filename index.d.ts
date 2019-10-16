@@ -1,14 +1,7 @@
-/// <reference types="graphql" />
-
 declare module 'oriql' {
-  type GraphQLPrimitiveType =
-    | GraphQLInt
-    | GraphQLFloat
-    | GraphQLString
-    | GraphQLBoolean
-    | GraphQLID;
+  import { GraphQLScalarType } from 'graphql';
 
-  type SchemaValue = GraphQLPrimitiveType | SchemaObject | GraphQLPrimitiveType[] | SchemaObject[];
+  type SchemaValue = GraphQLScalarType | GraphQLScalarType[] | SchemaObject | SchemaObject[];
 
   interface GraphQLArguments {
     [key: string]: SchemaValue;
