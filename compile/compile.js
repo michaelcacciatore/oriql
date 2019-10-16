@@ -3,7 +3,13 @@ const { sep } = require('path');
 const glob = require('glob');
 const { GRAPHQL_OPTIONS_KEY, GRAPHQL_PATH, resolve } = require('../constants');
 
-const { GraphQLNonNull, GraphQLList, GraphQLSchema, isOutputType } = require(GRAPHQL_PATH);
+const {
+  GraphQLNonNull,
+  GraphQLList,
+  GraphQLSchema,
+  isOutputType,
+  printSchema,
+} = require(GRAPHQL_PATH);
 
 const createArgumentConfig = require('./arguments');
 const compileClient = require('./client');
@@ -26,6 +32,7 @@ const compileSchema = async config => {
     server = false,
     typescript = false,
     flow = false,
+    external = false,
   } = config;
   try {
     const schemaFiles = schema || (await findFiles(pattern));
@@ -294,7 +301,7 @@ const compileSchema = async config => {
 
     return {
       client: clientSchema,
-      server: serverSchema,
+      server: external ? printSchema(serverSchema) : serverSchema,
       typescript: typeScriptDefinitions,
       flow: flowDefinitions,
     };
