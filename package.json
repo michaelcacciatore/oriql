@@ -30,11 +30,11 @@
   "dependencies": {
     "flowgen": "1.10.0",
     "glob": "7.1.4",
-    "graphql": "14.4.2",
+    "graphql": "14.5.8",
     "prettier": "1.18.2"
   },
   "resolutions": {
-    "graphql": "14.4.2"
+    "graphql": "14.5.8"
   },
   "devDependencies": {
     "eslint": "^5.16.0",
